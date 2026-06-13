@@ -25,12 +25,13 @@
         </button>
 
         <div data-tooltip-target="popover" popover id="search-tooltip" role="tooltip" class="search__tooltip-popover search__tooltip-popover-positioning">
-          <p><strong>Use filters to refine your search</strong></p>
+          <p><strong><%= t("administrate.search.filter_heading") %></strong></p>
           <ul>
             <% filters.keys.each do |filter_key| %>
             <li><%= filter_key %>:<span class="search__tooltip-popover-value">&lt;value&gt;</span></li>
             <% end %>
           </ul>
+          <p class="search__tooltip-popover-hint"><%= t("administrate.search.filter_hint") %></p>
         </div>
       </div>
     <% end %>

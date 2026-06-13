@@ -49,6 +49,7 @@ feature "Search" do
         expect(page).to have_content("Use filters to refine your search")
         expect(page).to have_content("vip:<value>")
         expect(page).to have_content("kind:<value>")
+        expect(page).to have_content("Combine filters with keywords")
       end
     end
 
@@ -145,6 +146,44 @@ feature "Search" do
     expect(page).to have_content(kind_match.email)
     expect(page).not_to have_content(total_mismatch.email)
     expect(page).not_to have_content(kind_mismatch.email)
+  end
+
+  scenario "admin combines a filter with a keyword in the same search", :js do
+    vip_match = create(:customer, kind: "vip", name: "Alice", email: "alice@vip.com")
+    vip_mismatch = create(:customer, kind: "vip", name: "Bob", email: "bob@vip.com")
+    standard_name_match = create(:customer, kind: "standard", name: "Alice", email: "alice@std.com")
+
+    visit admin_customers_path
+    fill_in :search, with: "kind:vip Alice"
+    submit_search
+
+    expect(page).to have_content(vip_match.email)
+    expect(page).not_to have_content(vip_mismatch.email)
+    expect(page).not_to have_content(standard_name_match.email)
+  end
+
+  scenario "admin searches with a URL-like term that is not a filter", :js do
+    url_customer = create(:customer, name: "https://example.com", email: "url@example.com")
+    other_customer = create(:customer, name: "someone else", email: "other@example.com")
+
+    visit admin_customers_path
+    fill_in :search, with: "https://example.com"
+    submit_search
+
+    expect(page).to have_content(url_customer.email)
+    expect(page).not_to have_content(other_customer.email)
+  end
+
+  scenario "admin searches with a quoted filter value containing spaces", :js do
+    kind_match = create(:customer, kind: "super vip", email: "super@vip.com")
+    mismatch = create(:customer, kind: "standard", email: "std@kind.com")
+
+    visit admin_customers_path
+    fill_in :search, with: 'kind:"super vip"'
+    submit_search
+
+    expect(page).to have_content(kind_match.email)
+    expect(page).not_to have_content(mismatch.email)
   end
 
   scenario "admin searches with an a term similiar to a filter", :js do

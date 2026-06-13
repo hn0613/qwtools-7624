@@ -28,3 +28,5 @@ en:
     search:
       clear: Clear search
       label: Search %{resource}
+      filter_heading: Use filters to refine your search
+      filter_hint: "Combine filters with keywords, e.g. kind:vip example.com"

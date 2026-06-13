@@ -21,7 +21,7 @@ module Administrate
       end
 
       def terms
-        @terms.join(" ")
+        @terms.join("")
       end
 
       def to_s
@@ -30,21 +30,88 @@ module Administrate
 
       private
 
-      def filter?(word)
-        valid_filters&.any? { |filter| word.match?(/^#{filter}:/) }
-      end
+      FILTER_VALUE_REGEX = /\A"([^"]*)"(.*)\z/
 
       def parse_query(query)
         filters = []
         terms = []
-        query.to_s.split.each do |word|
-          if filter?(word)
-            filters << word
+        remainder = query.to_s
+
+        until remainder.empty?
+          # Skip whitespace and record it as a term separator
+          if (ws_match = remainder.match(/\A(\s+)/))
+            terms << ws_match[1]
+            remainder = ws_match.post_match
+            next
+          end
+
+          # Try to match "filter_name:" at the current position
+          filter_name = try_extract_filter_name(remainder)
+
+          if filter_name
+            after_colon = remainder[(filter_name.length + 1)..]
+
+            # Quoted value: kind:"some value with spaces"
+            if (quoted_match = after_colon.match(FILTER_VALUE_REGEX))
+              value = quoted_match[1]
+              filters << "#{filter_name}:#{value}"
+              remainder = quoted_match[2]
+            else
+              # Unquoted value: extends to the next whitespace.
+              # Use index-based slicing to preserve all original spacing.
+              ws_pos = after_colon.index(/\s/)
+              if ws_pos
+                value = after_colon[0...ws_pos]
+                filters << "#{filter_name}:#{value}"
+                remainder = after_colon[ws_pos..]
+              else
+                filters << "#{filter_name}:#{after_colon}"
+                remainder = ""
+              end
+            end
           else
-            terms << word
+            # Not a filter — consume one whitespace-delimited token as a term.
+            # Use index-based slicing to preserve all original spacing.
+            ws_pos = remainder.index(/\s/)
+            if ws_pos
+              terms << remainder[0...ws_pos]
+              remainder = remainder[ws_pos..]
+            else
+              terms << remainder
+              remainder = ""
+            end
           end
         end
-        [filters, terms]
+
+        [filters, compact_terms(terms)]
+      end
+
+      def try_extract_filter_name(text)
+        return nil if @valid_filters.nil? || @valid_filters.empty?
+
+        colon_pos = text.index(":")
+        return nil unless colon_pos && colon_pos > 0
+
+        candidate = text[0...colon_pos]
+        # Filter names must be plain word-char identifiers — this avoids
+        # mis-matching tokens like "https:" inside URLs.
+        return nil unless candidate.match?(/\A\w+\z/)
+
+        @valid_filters.any? { |f| f == candidate } ? candidate : nil
+      end
+
+      # Strip leading and trailing whitespace entries so the reconstructed
+      # terms string preserves the original interior spacing exactly.
+      def compact_terms(terms)
+        return terms if terms.empty?
+
+        start_idx = 0
+        start_idx += 1 while start_idx < terms.length && terms[start_idx].match?(/\A\s+\z/)
+
+        end_idx = terms.length - 1
+        end_idx -= 1 while end_idx >= start_idx && terms[end_idx].match?(/\A\s+\z/)
+
+        terms[start_idx..end_idx]
       end
     end
 
@@ -84,7 +151,7 @@ module Administrate
 
     def filter_results(resources)
       query.filters.each do |filter_query|
-        filter_name, filter_param = filter_query.split(":")
+        filter_name, filter_param = filter_query.split(":", 2)
         filter = valid_filters[filter_name]
         resources = apply_filter(filter, filter_param, resources)
       end

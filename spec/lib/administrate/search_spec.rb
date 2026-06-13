@@ -223,6 +223,25 @@ describe Administrate::Search do
     ensure
       remove_constants :User
     end
+
+    it "passes the full filter value (including inner colons) to the filter lambda" do
+      class User < ApplicationRecord; end
+      scoped_object = User.default_scoped
+      search = Administrate::Search.new(
+        scoped_object,
+        Administrate::SearchSpecMocks::UserDashboard.new,
+        "kind:https://example.com"
+      )
+      expect(scoped_object).to \
+        receive(:where)
+        .with(kind: "https://example.com")
+        .and_return(scoped_object)
+      expect(scoped_object).to receive(:where).and_return(scoped_object)
+
+      search.run
+    ensure
+      remove_constants :User
+    end
   end
 end
 # standard:enable Lint/ConstantDefinitionInBlock
