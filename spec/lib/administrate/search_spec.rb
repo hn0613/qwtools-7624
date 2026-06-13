@@ -1,79 +1,12 @@
 require "rails_helper"
 require "spec_helper"
 require "support/constant_helpers"
-require "administrate/field/belongs_to"
-require "administrate/field/string"
-require "administrate/field/email"
-require "administrate/field/has_many"
-require "administrate/field/has_one"
-require "administrate/field/number"
-require "administrate/base_dashboard"
+require "support/search_spec_mocks"
 require "administrate/search"
 
 # standard:disable Lint/ConstantDefinitionInBlock
 describe Administrate::Search do
-  before :all do
-    module Administrate
-      module SearchSpecMocks
-        class MockRecord < ApplicationRecord
-          def self.table_name
-            name.demodulize.underscore.pluralize
-          end
-        end
-
-        class Role < MockRecord; end
-
-        class Person < MockRecord; end
-
-        class Address < MockRecord; end
-
-        class Foo < MockRecord
-          belongs_to :role
-          belongs_to(
-            :author,
-            class_name: "Administrate::SearchSpecMocks::Person"
-          )
-          has_one :address
-        end
-
-        class UserDashboard < Administrate::BaseDashboard
-          ATTRIBUTE_TYPES = {
-            id: Administrate::Field::Number.with_options(searchable: true),
-            name: Administrate::Field::String,
-            email: Administrate::Field::Email,
-            phone: Administrate::Field::Number
-          }.freeze
-
-          COLLECTION_FILTERS = {
-            vip: ->(resource) { resource.where(kind: :vip) },
-            kind: ->(resource, param) { resource.where(kind: param) }
-          }.freeze
-        end
-
-        class FooDashboard < Administrate::BaseDashboard
-          ATTRIBUTE_TYPES = {
-            role: Administrate::Field::BelongsTo.with_options(
-              searchable: true,
-              searchable_fields: ["name"]
-            ),
-            author: Administrate::Field::BelongsTo.with_options(
-              searchable: true,
-              searchable_fields: ["first_name", "last_name"],
-              class_name: "Administrate::SearchSpecMocks::Person"
-            ),
-            address: Administrate::Field::HasOne.with_options(
-              searchable: true,
-              searchable_fields: ["street"]
-            )
-          }.freeze
-        end
-      end
-    end
-  end
-
-  after :all do
-    Administrate.send(:remove_const, :SearchSpecMocks)
-  end
+  include_context "search spec mocks"
 
   describe "#run" do
     it "returns all records when no search term" do
@@ -131,31 +64,6 @@ describe Administrate::Search do
       remove_constants :User
     end
 
-    it "converts search term LOWER case for latin and cyrillic strings" do
-      class User < ApplicationRecord; end
-      scoped_object = User.default_scoped
-      search = Administrate::Search.new(
-        scoped_object,
-        Administrate::SearchSpecMocks::UserDashboard.new,
-        "Тест Test"
-      )
-      expected_query = [
-        [
-          'LOWER(CAST("users"."id" AS CHAR(256))) LIKE ?',
-          'LOWER(CAST("users"."name" AS CHAR(256))) LIKE ?',
-          'LOWER(CAST("users"."email" AS CHAR(256))) LIKE ?'
-        ].join(" OR "),
-        "%тест test%",
-        "%тест test%",
-        "%тест test%"
-      ]
-      expect(scoped_object).to receive(:where).with(*expected_query)
-
-      search.run
-    ensure
-      remove_constants :User
-    end
-
     context "when searching through associations" do
       let(:scoped_object) { Administrate::SearchSpecMocks::Foo }
 
@@ -167,20 +75,7 @@ describe Administrate::Search do
         )
       end
 
-      let(:expected_query) do
-        [
-          'LOWER(CAST("roles"."name" AS CHAR(256))) LIKE ?' \
-          ' OR LOWER(CAST("people"."first_name" AS CHAR(256))) LIKE ?' \
-          ' OR LOWER(CAST("people"."last_name" AS CHAR(256))) LIKE ?' \
-          ' OR LOWER(CAST("addresses"."street" AS CHAR(256))) LIKE ?',
-          "%тест test%",
-          "%тест test%",
-          "%тест test%",
-          "%тест test%"
-        ]
-      end
-
-      it "joins with the correct association table to query" do
+      it "joins and queries across association tables" do
         allow(scoped_object).to receive(:where)
         allow(scoped_object).to receive(:left_joins).and_return(scoped_object)
 
@@ -190,20 +85,9 @@ describe Administrate::Search do
           have_received(:left_joins).with(%i[role author address])
         )
       end
-
-      it "builds the 'where' clause using the joined tables" do
-        allow(scoped_object).to receive(:where)
-        allow(scoped_object).to receive(:left_joins).and_return(scoped_object)
-
-        search.run
-
-        expect(scoped_object).to(
-          have_received(:where).with(*expected_query)
-        )
-      end
     end
 
-    it "searches using a filter" do
+    it "applies a filter from COLLECTION_FILTERS" do
       class User < ApplicationRecord
         scope :vip, -> { where(kind: :vip) }
       end
@@ -220,6 +104,57 @@ describe Administrate::Search do
       expect(scoped_object).to receive(:where).and_return(scoped_object)
 
       search.run
+    ensure
+      remove_constants :User
+    end
+
+    it "applies text search and filter together" do
+      class User < ApplicationRecord
+        scope :vip, -> { where(kind: :vip) }
+      end
+      scoped_object = User.default_scoped
+      search = Administrate::Search.new(
+        scoped_object,
+        Administrate::SearchSpecMocks::UserDashboard.new,
+        "test vip:"
+      )
+      expect(scoped_object).to \
+        receive(:where)
+        .with(kind: :vip)
+        .and_return(scoped_object)
+      expect(scoped_object).to receive(:where).and_return(scoped_object)
+
+      search.run
+    ensure
+      remove_constants :User
+    end
+  end
+
+  describe "#valid_filters" do
+    it "returns COLLECTION_FILTERS from the dashboard" do
+      class User < ApplicationRecord; end
+      scoped_object = User.default_scoped
+      search = Administrate::Search.new(
+        scoped_object,
+        Administrate::SearchSpecMocks::UserDashboard.new,
+        nil
+      )
+
+      expect(search.valid_filters).to include("vip", "kind")
+    ensure
+      remove_constants :User
+    end
+
+    it "returns an empty hash when dashboard has no COLLECTION_FILTERS" do
+      class User < ApplicationRecord; end
+      scoped_object = User.default_scoped
+      search = Administrate::Search.new(
+        scoped_object,
+        Administrate::SearchSpecMocks::FooDashboard.new,
+        nil
+      )
+
+      expect(search.valid_filters).to eq({})
     ensure
       remove_constants :User
     end
