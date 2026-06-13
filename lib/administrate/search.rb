@@ -34,14 +34,33 @@ module Administrate
         valid_filters&.any? { |filter| word.match?(/^#{filter}:/) }
       end
 
+      def tokenize(query)
+        tokens = []
+        current = +""
+        in_quotes = false
+
+        query.to_s.each_char do |char|
+          if char == '"'
+            in_quotes = !in_quotes
+          elsif char =~ /\s/ && !in_quotes
+            tokens << current unless current.empty?
+            current = +""
+          else
+            current << char
+          end
+        end
+        tokens << current unless current.empty?
+        tokens
+      end
+
       def parse_query(query)
         filters = []
         terms = []
-        query.to_s.split.each do |word|
-          if filter?(word)
-            filters << word
+        tokenize(query).each do |token|
+          if filter?(token)
+            filters << token
           else
-            terms << word
+            terms << token
           end
         end
         [filters, terms]
@@ -84,7 +103,7 @@ module Administrate
 
     def filter_results(resources)
       query.filters.each do |filter_query|
-        filter_name, filter_param = filter_query.split(":")
+        filter_name, filter_param = filter_query.split(":", 2)
         filter = valid_filters[filter_name]
         resources = apply_filter(filter, filter_param, resources)
       end

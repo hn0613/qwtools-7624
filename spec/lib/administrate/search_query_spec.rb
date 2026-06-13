@@ -60,4 +60,64 @@ describe Administrate::Search::Query do
       expect(subject.terms).to eq("example.com")
     end
   end
+
+  context "when query includes a filter with a quoted multi-word value" do
+    subject { described_class.new(query, ["kind"]) }
+    let(:query) { 'kind:"premium customer" searchterm' }
+
+    it "keeps the quoted value as a single filter" do
+      expect(subject.filters).to eq(["kind:premium customer"])
+      expect(subject.terms).to eq("searchterm")
+    end
+  end
+
+  context "when query includes a quoted search term without a filter prefix" do
+    subject { described_class.new(query, ["kind"]) }
+    let(:query) { '"hello world" other' }
+
+    it "treats the quoted phrase as a single search term" do
+      expect(subject.filters).to eq([])
+      expect(subject.terms).to eq("hello world other")
+    end
+  end
+
+  context "when query has an unclosed quote" do
+    subject { described_class.new(query, ["kind"]) }
+    let(:query) { 'kind:"unclosed value' }
+
+    it "closes the quote at the end of input" do
+      expect(subject.filters).to eq(["kind:unclosed value"])
+      expect(subject.terms).to eq("")
+    end
+  end
+
+  context "when query includes a filter with colons in the value" do
+    subject { described_class.new(query, ["time"]) }
+    let(:query) { "time:10:30" }
+
+    it "keeps the full value including colons" do
+      expect(subject.filters).to eq(["time:10:30"])
+      expect(subject.terms).to eq("")
+    end
+  end
+
+  context "when query mixes quoted and unquoted filters" do
+    subject { described_class.new(query, ["kind", "status"]) }
+    let(:query) { 'kind:"premium customer" status:active term' }
+
+    it "parses both filters correctly" do
+      expect(subject.filters).to eq(["kind:premium customer", "status:active"])
+      expect(subject.terms).to eq("term")
+    end
+  end
+
+  context "when query has a filter with an empty quoted value" do
+    subject { described_class.new(query, ["kind"]) }
+    let(:query) { 'kind:"" term' }
+
+    it "treats the filter as parameterless" do
+      expect(subject.filters).to eq(["kind:"])
+      expect(subject.terms).to eq("term")
+    end
+  end
 end

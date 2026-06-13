@@ -223,6 +223,44 @@ describe Administrate::Search do
     ensure
       remove_constants :User
     end
+
+    it "passes the full filter value when it contains colons" do
+      class User < ApplicationRecord; end
+      scoped_object = User.default_scoped
+      search = Administrate::Search.new(
+        scoped_object,
+        Administrate::SearchSpecMocks::UserDashboard.new,
+        "kind:special:value"
+      )
+      expect(scoped_object).to \
+        receive(:where)
+        .with(kind: "special:value")
+        .and_return(scoped_object)
+      expect(scoped_object).to receive(:where).and_return(scoped_object)
+
+      search.run
+    ensure
+      remove_constants :User
+    end
+
+    it "applies a filter with a quoted multi-word value" do
+      class User < ApplicationRecord; end
+      scoped_object = User.default_scoped
+      search = Administrate::Search.new(
+        scoped_object,
+        Administrate::SearchSpecMocks::UserDashboard.new,
+        'kind:"premium customer"'
+      )
+      expect(scoped_object).to \
+        receive(:where)
+        .with(kind: "premium customer")
+        .and_return(scoped_object)
+      expect(scoped_object).to receive(:where).and_return(scoped_object)
+
+      search.run
+    ensure
+      remove_constants :User
+    end
   end
 end
 # standard:enable Lint/ConstantDefinitionInBlock

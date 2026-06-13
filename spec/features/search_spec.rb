@@ -47,8 +47,8 @@ feature "Search" do
         search_tooltip_icon.click
 
         expect(page).to have_content("Use filters to refine your search")
-        expect(page).to have_content("vip:<value>")
-        expect(page).to have_content("kind:<value>")
+        expect(page).to have_content('vip:"<value>"')
+        expect(page).to have_content('kind:"<value>"')
       end
     end
 
@@ -145,6 +145,18 @@ feature "Search" do
     expect(page).to have_content(kind_match.email)
     expect(page).not_to have_content(total_mismatch.email)
     expect(page).not_to have_content(kind_mismatch.email)
+  end
+
+  scenario "admin searches with a quoted filter value", :js do
+    kind_match = create(:customer, kind: "vip", email: "quoted@kind.com")
+    mismatch = create(:customer, kind: "standard", email: "other@kind.com")
+
+    visit admin_customers_path
+    fill_in :search, with: 'kind:"vip"'
+    submit_search
+
+    expect(page).to have_content(kind_match.email)
+    expect(page).not_to have_content(mismatch.email)
   end
 
   scenario "admin searches with an a term similiar to a filter", :js do
