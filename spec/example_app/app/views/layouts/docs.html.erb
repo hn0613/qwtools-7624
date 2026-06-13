@@ -24,24 +24,42 @@
       <h3>Documentation</h3>
 
       <ul class="sidebar-links">
-        <li><a href="/getting_started">Getting Started</a></li>
-        <li><a href="/migrating-to-v1">Migrating to v1</a></li>
-        <li><a href="/customizing_dashboards">Customizing Dashboards</a></li>
-        <li><a href="/customizing_page_views">Customizing Page Views</a></li>
-        <li><a href="/customizing_attribute_partials">Customizing Attribute Partials</a></li>
-        <li><a href="/adding_custom_field_types">Adding Custom Field Types</a></li>
-        <li><a href="/adding_controllers_without_related_model">Adding Controllers without a related Model</a></li>
-        <li><a href="/customizing_controller_actions">Customizing Controller Actions</a></li>
-        <li><a href="/authentication">Authentication</a></li>
-        <li><a href="/authorization">Authorization</a></li>
-        <li><a href="/rails_api">Rails API</a></li>
-        <li><a href="/extending_administrate">Extending Administrate</a></li>
-        <li><a href="/guides">Guides</a></li>
-        <li><a href="/using_administrate">Using Administrate</a></li>
+        <% DocNavigation.tree.each do |item| %>
+          <% is_active = @current_page_path == item.path %>
+          <% has_active_child = item.children.any? { |c| @current_page_path == c.path } %>
+          <li class="<%= 'active' if is_active %> <%= 'has-children' if item.children.any? %>">
+            <a href="<%= item.url %>"><%= item.title %></a>
+            <% if item.children.any? %>
+              <ul>
+                <% item.children.each do |child| %>
+                  <li class="<%= 'active' if @current_page_path == child.path %>">
+                    <a href="<%= child.url %>"><%= child.title %></a>
+                  </li>
+                <% end %>
+              </ul>
+            <% end %>
+          </li>
+        <% end %>
       </ul>
     </div>
 
     <div class="main">
+      <% if @breadcrumbs&.any? %>
+        <nav class="breadcrumbs">
+          <% @breadcrumbs.each_with_index do |crumb, i| %>
+            <% if i < @breadcrumbs.length - 1 %>
+              <% if crumb[:url] %>
+                <a href="<%= crumb[:url] %>"><%= crumb[:title] %></a>
+              <% else %>
+                <span><%= crumb[:title] %></span>
+              <% end %>
+            <% else %>
+              <span><%= crumb[:title] %></span>
+            <% end %>
+          <% end %>
+        </nav>
+      <% end %>
+
       <%= yield %>
     </div>
   </div>

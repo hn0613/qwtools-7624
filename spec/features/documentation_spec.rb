@@ -77,6 +77,61 @@ describe "documentation navigation" do
     end
   end
 
+  it "shows breadcrumbs on the homepage" do
+    visit root_path
+
+    expect(page).to have_css("nav.breadcrumbs")
+  end
+
+  it "shows breadcrumbs on a doc page" do
+    visit "/getting_started"
+
+    expect(page).to have_css("nav.breadcrumbs", text: "Getting Started")
+  end
+
+  it "shows parent trail in breadcrumbs for nested docs" do
+    visit "/guides/customising_search"
+
+    within("nav.breadcrumbs") do
+      expect(page).to have_content("Guides")
+      expect(page).to have_content("Customising the search")
+    end
+  end
+
+  it "shows breadcrumbs on special pages" do
+    visit "/contributing"
+
+    expect(page).to have_css("nav.breadcrumbs", text: "Contributing Guide")
+  end
+
+  it "does not show breadcrumbs on 404 pages" do
+    visit "/not_a_page"
+
+    expect(page).not_to have_css("nav.breadcrumbs")
+    expect(page).not_to have_css(".sidebar")
+  end
+
+  it "marks the current page as active in the sidebar" do
+    visit "/getting_started"
+
+    expect(page).to have_css(".sidebar-links .active a", text: "Getting Started")
+  end
+
+  it "marks nested pages as active in the sidebar" do
+    visit "/guides/customising_search"
+
+    expect(page).to have_css(".sidebar-links .active a", text: "Customising the search")
+  end
+
+  it "shows nested docs in the sidebar" do
+    visit "/getting_started"
+
+    within(".sidebar") do
+      expect(page).to have_link("Customising the search")
+      expect(page).to have_link("Stable Sorting")
+    end
+  end
+
   it "links to the GitHub repo" do
     visit root_path
 

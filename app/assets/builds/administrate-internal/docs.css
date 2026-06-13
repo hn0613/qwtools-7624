@@ -1,3 +1,4 @@
+@charset "UTF-8";
 :root {
   --blue: #53adc6;
   --red: #cf726e;
@@ -50,9 +51,48 @@ a {
   list-style: none;
   padding-left: 0;
 }
+.content .sidebar-links .active > a {
+  color: var(--blue);
+  font-weight: bold;
+  border-left: 3px solid var(--blue);
+  padding-left: 0.5em;
+  margin-left: -0.5em;
+}
+.content .sidebar-links ul {
+  list-style: none;
+  padding-left: 1em;
+}
+.content .sidebar-links ul li {
+  font-size: 0.9em;
+  line-height: 1.4em;
+}
 .content .main {
   float: right;
   width: 40em;
+}
+.content .breadcrumbs {
+  font-size: 0.85em;
+  color: #888;
+  margin-bottom: 1.5em;
+  padding-bottom: 0.75em;
+  border-bottom: 1px solid #e0e0e0;
+}
+.content .breadcrumbs a,
+.content .breadcrumbs span {
+  display: inline;
+}
+.content .breadcrumbs a {
+  color: var(--blue);
+}
+.content .breadcrumbs span:last-child {
+  color: #333;
+  font-weight: bold;
+}
+.content .breadcrumbs a::after,
+.content .breadcrumbs span:not(:last-child)::after {
+  content: "›";
+  margin: 0 0.4em;
+  color: #ccc;
 }
 
 .flash-wrapper {

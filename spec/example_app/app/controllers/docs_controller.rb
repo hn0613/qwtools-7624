@@ -12,7 +12,9 @@ class DocsController < ApplicationController
     when "security", "SECURITY"
       render_page("SECURITY", "Security Policy")
     else
-      render_page("docs/#{params[:page]}")
+      page = params[:page]
+      page = "docs/#{page}" unless page.start_with?("docs/")
+      render_page(page)
     end
   end
 
@@ -20,6 +22,9 @@ class DocsController < ApplicationController
 
   def render_page(name, title = nil)
     page = DocPage.find(name)
+
+    @current_page_path = name
+    @breadcrumbs = DocNavigation.breadcrumbs(@current_page_path)
 
     title ||= page.title
     @page_title = [title, "Administrate"].compact.join(" - ")

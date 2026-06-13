@@ -50,12 +50,59 @@ a {
     &-links {
       list-style: none;
       padding-left: 0;
+
+      .active > a {
+        color: var(--blue);
+        font-weight: bold;
+        border-left: 3px solid var(--blue);
+        padding-left: 0.5em;
+        margin-left: -0.5em;
+      }
+
+      ul {
+        list-style: none;
+        padding-left: 1em;
+
+        li {
+          font-size: 0.9em;
+          line-height: 1.4em;
+        }
+      }
     }
   }
 
   .main {
     float: right;
     width: 40em;
+  }
+
+  .breadcrumbs {
+    font-size: 0.85em;
+    color: #888;
+    margin-bottom: 1.5em;
+    padding-bottom: 0.75em;
+    border-bottom: 1px solid #e0e0e0;
+
+    a,
+    span {
+      display: inline;
+    }
+
+    a {
+      color: var(--blue);
+    }
+
+    span:last-child {
+      color: #333;
+      font-weight: bold;
+    }
+
+    a::after,
+    span:not(:last-child)::after {
+      content: "\203A";
+      margin: 0 0.4em;
+      color: #ccc;
+    }
   }
 }
 
