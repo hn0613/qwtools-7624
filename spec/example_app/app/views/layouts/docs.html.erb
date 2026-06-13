@@ -42,6 +42,19 @@
     </div>
 
     <div class="main">
+      <% if @breadcrumbs.present? %>
+        <nav class="breadcrumbs" aria-label="Breadcrumb">
+          <ol>
+            <% @breadcrumbs.each do |crumb| %>
+              <% if crumb[:path] %>
+                <li><a href="<%= crumb[:path] %>"><%= crumb[:title] %></a></li>
+              <% else %>
+                <li aria-current="page"><%= crumb[:title] %></li>
+              <% end %>
+            <% end %>
+          </ol>
+        </nav>
+      <% end %>
       <%= yield %>
     </div>
   </div>

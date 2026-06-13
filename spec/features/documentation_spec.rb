@@ -65,6 +65,42 @@ describe "documentation navigation" do
     expect(page).to have_content("Resources can be removed from the sidebar")
   end
 
+  it "shows breadcrumb with Home on the homepage" do
+    visit(root_path)
+
+    within("nav.breadcrumbs") do
+      expect(page).to have_css("li[aria-current='page']", text: "Home")
+    end
+  end
+
+  it "shows breadcrumb with Home link on a doc page" do
+    visit("/getting_started")
+
+    within("nav.breadcrumbs") do
+      expect(page).to have_link("Home", href: "/")
+      expect(page).to have_css("li[aria-current='page']", text: "Getting Started")
+    end
+  end
+
+  it "shows breadcrumb with parent hierarchy on nested doc pages" do
+    visit("/guides/hiding_dashboards_from_sidebar")
+
+    within("nav.breadcrumbs") do
+      expect(page).to have_link("Home", href: "/")
+      expect(page).to have_link("Guides", href: "/guides")
+      expect(page).to have_css(
+        "li[aria-current='page']",
+        text: "Hiding Dashboards from the Sidebar"
+      )
+    end
+  end
+
+  it "does not show breadcrumbs on missing pages" do
+    visit("not_a_page")
+
+    expect(page).not_to have_css("nav.breadcrumbs")
+  end
+
   it "links to each documentation page" do
     visit root_path
     links = internal_documentation_links
